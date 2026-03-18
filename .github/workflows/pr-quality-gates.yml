@@ -4,10 +4,8 @@
 name: PR Quality Gates
 
 on:
-  push:
-    branches: 
-        - main
-        - test
+  pull_request:
+    branches: [main]
 
 env:
   JAVA_VERSION: "17"
@@ -24,9 +22,9 @@ jobs:
       - name: check branch name format
         env:
           BRANCH_NAME: ${{ github.head_ref }}
-          JIRA_KEY_PATTERN: 'poc'
+          JIRA_KEY_PATTERN: 'APIPOD'
         run: |
-          PATTERN="^(feature|test|hotfix)\/${{ env.JIRA_KEY_PATTERN }}-[A-Z0-9]+-[a-z0-9-]+$"
+          PATTERN="^(feature|hotfix)\/${{ env.JIRA_KEY_PATTERN }}-[A-Z0-9]+-[a-z0-9-]+$"
           if [[ ! "${{ env.BRANCH_NAME }}" =~ $PATTERN ]]; then
             echo "Branch name '${{ env.BRANCH_NAME }}' does not match the required pattern: ${PATTERN}"
             exit 1

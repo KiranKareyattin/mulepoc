@@ -1,7 +1,9 @@
 name: PR Quality Check - Docker Integration Test
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches: 
+      - main
+      - test
 env:
   JAVA_VERSION: "17"
   MAVEN_OPTIONS: "-Xmx1g -XX:+UseG1GC"
@@ -19,6 +21,7 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
           cache: maven
+      
       - name: Build snapshot Jar
         run: mvn package -DskipTests -B -ntp
 
@@ -28,18 +31,21 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t my-app:latest .
+      
       - name: Start Docker compose services
         run: |
           docker compose -f docker-compose.integration.yml up -d
+      
       - name: wait for Mule app to be healthy
         run: |
           until [ "$(docker inspect -f '{{.State.Health.Status}}' mule-app-integration-test)" == "healthy" ]; do
             echo "Waiting for Mule app to be healthy..."
             sleep 5
           done
+      
       - name: Run Maven Failsafe integration tests
         id: run-failsafe-tests
-        run: mvn failsafe:integration-test failsafe:verify -B -ntp -Ddb.port=5432 
+        run: mvn failsafe:integration-test failsafe:verify -B -ntp -Ddb.port=5432
       
       - name: Prepare Logs and Reports
         if: always()
@@ -50,14 +56,15 @@ jobs:
             mkdir -p target/integration-results/reports
             cp target/failsafe-reports/*.xml target/integration-results/reports/ || true
           fi
+      
       - name: Tear down Docker compose services
         if: always()
         run: |
           docker compose -f docker-compose.integration.yml down --volumes
       
       - name: Upload Logs and Reports
-        if: always() 
-        uses: actions/upload-artifact@v4 
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: integration-test-results
           path: target/integration-results
