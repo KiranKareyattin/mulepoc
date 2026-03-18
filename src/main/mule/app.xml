@@ -1,0 +1,14 @@
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <http:listener-config name="HTTP_Listener_config">
+        <http:listener-connection host="0.0.0.0" port="8081"/>
+    </http:listener-config>
+
+    <flow name="healthFlow">
+        <http:listener path="/api/v1/health" config-ref="HTTP_Listener_config"/>
+        <set-payload value='{"status":"UP"}'/>
+    </flow>
+
+</mule>

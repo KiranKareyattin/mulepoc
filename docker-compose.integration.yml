@@ -1,0 +1,63 @@
+# docker-compose.integration.yml
+# Docker Compose configuration for integration testing in GitHub actions CI pipeline
+# Services:
+# - wiremock: Simulates downstream APIs for testing the Mule application
+# - mule-app: The Mule application being tested, built from the Dockerfile in the project
+# Usage:
+# docker compose -f docker-compose.integration.yml up -d
+# docker compose -f docker-compose.integration.yml down --volumes
+# NOTE: Adjust the mule-enterprise-standalone image tags to match your project's actual mule runtime version and edition(e.g. 4.4-latest, 4.5-latest, 4.6-latest, etc.)
+
+version: '3.8'
+services:
+  wiremock:
+    image: wiremock/wiremock:latest
+    ports:
+      - "8181:8080"
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings:ro
+    command:
+      - "--verbose"
+      - "--global-response-templating"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "--silent", "http://localhost:8181/__admin/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+        - mule-integration-net
+
+  mule-app:
+    image: mule-enterprise-standalone:4.6-latest
+    container_name: mule-app-integration-test
+    depends_on:
+      wiremock:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./target/*.jar:/opt/mule/apps/my-app.jar:ro
+    environment:
+      - env=local
+      - mule.env=local
+      #disable anypoint analytics for integration testing(no license required)
+      - anypoint.platform.analytics.enabled=false
+      - anypoint.platform.visualizer.displayName=mule-app-integration-test
+      - downstream.api.base.url=http://wiremock:8080
+      - http.port=8081
+      - api.base.path=/api/v1
+      - mule.secure.key=integration-test-key-not-for-production
+      - MULE_JAVA_ARGS=-Xms256m -Xmx512m -XX:+UseG1GC
+    healthcheck:
+      test: ["CMD", "curl", "-f", "--silent", "http://localhost:8081/api/v1/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+    networks:
+        - mule-integration-net
+networks:
+  mule-integration-net:
+    driver: bridge
+    name: mule-integration-net
