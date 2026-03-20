@@ -43,6 +43,7 @@
             <artifactId>mule-http-connector</artifactId>
             <version>1.5.0</version>
             <classifier>mule-plugin</classifier>
+        </dependency>
     </dependencies>
 
     <build>
