@@ -20,7 +20,7 @@ services:
       - mule-integration-net
 
   mule-app:
-    image: mule-enterprise-standalone:4.6-latest
+    image: mulesoft/mule:4.6.0
     container_name: mule-app-integration-test
 
     depends_on:
