@@ -24,7 +24,7 @@
     <repositories>
         <repository>
             <id>mulesoft-releases</id>
-            <name>MuleSoft Releases Repository</name>
+            <name>MuleSoft Releases</name>
             <url>https://repository.mulesoft.org/releases/</url>
         </repository>
     </repositories>
@@ -34,7 +34,7 @@
             <plugin>
                 <groupId>org.mule.tools.maven</groupId>
                 <artifactId>mule-maven-plugin</artifactId>
-                <version>3.9.0</version>
+                <version>3.8.0</version>
                 <extensions>true</extensions>
             </plugin>
         </plugins>
