@@ -36,12 +36,12 @@ jobs:
         run: |
           docker compose -f docker-compose.integration.yml up -d
       
-      - name: wait for Mule app to be healthy
-        run: |
-          until [ "$(docker inspect -f '{{.State.Health.Status}}' mule-app-integration-test)" == "healthy" ]; do
-            echo "Waiting for Mule app to be healthy..."
-            sleep 5
-          done
+      # - name: wait for Mule app to be healthy
+      #   run: |
+      #     until [ "$(docker inspect -f '{{.State.Health.Status}}' mule-app-integration-test)" == "healthy" ]; do
+      #       echo "Waiting for Mule app to be healthy..."
+      #       sleep 5
+      #     done
       
       - name: Run Maven Failsafe integration tests
         id: run-failsafe-tests
