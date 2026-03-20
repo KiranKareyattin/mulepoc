@@ -23,7 +23,7 @@ jobs:
           cache: maven
       
       - name: Build snapshot Jar
-        run: mvn package -DskipTests -B -ntp
+        run: docker run --rm -v ${PWD}:/app -w /app maven:3.8.6-eclipse-temurin-11 mvn clean package -DskipTests
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
