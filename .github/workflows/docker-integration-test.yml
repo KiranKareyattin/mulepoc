@@ -34,7 +34,7 @@ jobs:
             maven:3.8.8-eclipse-temurin-17 \
             mvn clean package -DskipTests
 
-      - name: Set up Docker Buildx
+      - name: Set up Docker Build
         uses: docker/setup-buildx-action@v4
 
       - name: Build Docker image
