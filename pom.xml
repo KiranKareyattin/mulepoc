@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,12 +13,11 @@
 
     <properties>
         <mule.runtime.version>4.6.0</mule.runtime.version>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <mule.maven.plugin.version>3.8.0</mule.maven.plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <!-- MuleSoft Repositories -->
+    <!-- ✅ Required for Mule dependencies -->
     <repositories>
         <repository>
             <id>mulesoft-releases</id>
@@ -27,34 +26,29 @@
         </repository>
     </repositories>
 
+    <!-- ✅ Required for mule-maven-plugin -->
     <pluginRepositories>
         <pluginRepository>
             <id>mulesoft-releases</id>
-            <name>MuleSoft Plugin Repository</name>
+            <name>MuleSoft Releases</name>
             <url>https://repository.mulesoft.org/releases/</url>
         </pluginRepository>
     </pluginRepositories>
 
-    <!-- REQUIRED: Mule Connectors -->
-    <dependencies>
-        <!-- HTTP Connector (fixes your XSD error) -->
-        <dependency>
-            <groupId>org.mule.connectors</groupId>
-            <artifactId>mule-http-connector</artifactId>
-            <version>1.5.0</version>
-            <classifier>mule-plugin</classifier>
-        </dependency>
-    </dependencies>
-
     <build>
         <plugins>
-            <!-- Mule Maven Plugin -->
+
+            <!-- ✅ Mule Maven Plugin -->
             <plugin>
                 <groupId>org.mule.tools.maven</groupId>
                 <artifactId>mule-maven-plugin</artifactId>
-                <version>3.9.0</version>
+                <version>${mule.maven.plugin.version}</version>
                 <extensions>true</extensions>
+                <configuration>
+                    <classifier>mule-application</classifier>
+                </configuration>
             </plugin>
+
         </plugins>
     </build>
 
