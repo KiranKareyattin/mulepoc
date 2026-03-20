@@ -11,19 +11,17 @@
     <version>1.0.0</version>
     <packaging>mule-application</packaging>
 
-    <!-- ✅ Java 17 -->
+    <!-- Java 17 -->
     <properties>
         <mule.runtime.version>4.6.0</mule.runtime.version>
-        <mule.maven.plugin.version>3.9.1</mule.maven.plugin.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
     </properties>
 
-    <!-- ✅ MuleSoft Repo -->
+    <!-- MuleSoft Repo -->
     <repositories>
         <repository>
             <id>mulesoft-releases</id>
-            <name>MuleSoft Repository</name>
             <url>https://repository.mulesoft.org/releases/</url>
         </repository>
     </repositories>
@@ -31,7 +29,6 @@
     <pluginRepositories>
         <pluginRepository>
             <id>mulesoft-releases</id>
-            <name>MuleSoft Repository</name>
             <url>https://repository.mulesoft.org/releases/</url>
         </pluginRepository>
     </pluginRepositories>
@@ -41,21 +38,18 @@
             <plugin>
                 <groupId>org.mule.tools.maven</groupId>
                 <artifactId>mule-maven-plugin</artifactId>
-                <version>${mule.maven.plugin.version}</version>
+                <version>4.1.1</version> <!-- Java 17 supported -->
                 <extensions>true</extensions>
-
-                <configuration>
-                    <classifier>mule-application</classifier>
-                </configuration>
             </plugin>
 
-            <!-- ✅ Ensure Java 17 compilation -->
+            <!-- Compiler plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <release>17</release>
+                    <source>17</source>
+                    <target>17</target>
                 </configuration>
             </plugin>
         </plugins>
