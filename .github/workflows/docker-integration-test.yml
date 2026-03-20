@@ -1,4 +1,4 @@
-name: PR Quality Check - Docker Integration Test
+name: PR Quality Check - Integration Test
 
 on:
   push:
@@ -8,11 +8,9 @@ on:
 
 env:
   JAVA_VERSION: "17"
-  MAVEN_OPTIONS: "-Xmx1g -XX:+UseG1GC"
 
 jobs:
-  docker-integration-test:
-    name: Docker Integration Test
+  integration-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,68 +24,58 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # Optional but safe
       - name: Clean Maven cache
         run: rm -rf ~/.m2/repository
 
-      # ✅ Build Mule JAR
-      - name: Build snapshot Jar
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/app \
-            -v ${{ github.workspace }}/.m2:/root/.m2 \
-            -w /app \
-            maven:3.9.6-eclipse-temurin-17 \
-            mvn clean package -DskipTests
+      # ✅ Build Mule app
+      - name: Build Mule App
+        run: mvn clean package -DskipTests
 
-      - name: Start Docker compose services
-        run: |
-          docker compose -f docker-compose.integration.yml up -d
+      # ✅ Start WireMock
+      - name: Start WireMock
+        run: docker compose -f docker-compose.integration.yml up -d
 
-      # ✅ IMPORTANT: Wait until Mule app is healthy
-      - name: Wait for Mule App to be healthy
+      # ✅ Wait for WireMock
+      - name: Wait for WireMock
         run: |
-          echo "Waiting for Mule app to start..."
-          for i in {1..30}; do
-            STATUS=$(docker inspect -f '{{.State.Health.Status}}' mule-app-integration-test || echo "starting")
-            echo "Current status: $STATUS"
-            if [ "$STATUS" == "healthy" ]; then
-              echo "Mule app is healthy!"
+          echo "Waiting for WireMock..."
+          for i in {1..10}; do
+            if curl -f http://localhost:8181/__admin/health; then
+              echo "WireMock is ready!"
               exit 0
             fi
-            sleep 10
+            sleep 5
           done
-          echo "Mule app failed to become healthy"
-          docker logs mule-app-integration-test
+          echo "WireMock failed to start"
+          docker logs $(docker ps -q)
           exit 1
 
+      # ✅ Run Mule app in background
+      - name: Start Mule App
+        run: |
+          mvn mule:run &
+          sleep 60
+
       # ✅ Run integration tests
-      - name: Run Maven Failsafe integration tests
-        run: mvn failsafe:integration-test failsafe:verify -B -ntp
+      - name: Run Integration Tests
+        run: mvn failsafe:integration-test failsafe:verify
 
       # ✅ Collect logs
-      - name: Prepare Logs and Reports
+      - name: Collect Logs
         if: always()
         run: |
           mkdir -p target/integration-results/logs
-          docker compose -f docker-compose.integration.yml logs > target/integration-results/logs/docker-compose.log || true
+          docker compose -f docker-compose.integration.yml logs > target/integration-results/logs/docker.log || true
 
-          if [ -d "target/failsafe-reports" ]; then
-            mkdir -p target/integration-results/reports
-            cp target/failsafe-reports/*.xml target/integration-results/reports/ || true
-          fi
-
-      # ✅ Cleanup
-      - name: Tear down Docker compose services
+      # ✅ Stop services
+      - name: Stop services
         if: always()
-        run: |
-          docker compose -f docker-compose.integration.yml down --volumes
+        run: docker compose -f docker-compose.integration.yml down --volumes
 
-      - name: Upload Logs and Reports
+      # ✅ Upload reports
+      - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: integration-test-results
-          path: target/integration-results
-          retention-days: 7
-          if-no-files-found: ignore
+          path: target
