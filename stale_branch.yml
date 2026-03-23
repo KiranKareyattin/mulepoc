@@ -1,0 +1,146 @@
+name: Stale Branch Governance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+env:
+  STALE_DAYS: 30
+  EXCLUDE_BRANCHES: "main develop"
+
+jobs:
+  stale-branch-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install gh jq -y
+
+      - name: Authenticate GitHub CLI
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Fetch all branches
+        run: |
+          git fetch --prune --all
+
+      - name: Identify stale branches
+        id: stale
+        run: |
+          set -e
+          CURRENT_TIME=$(date +%s)
+          echo "[]" > stale_branches.json
+
+          for branch in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/); do
+            BRANCH_NAME=${branch#origin/}
+
+            # Skip excluded branches
+            if [[ " $EXCLUDE_BRANCHES " =~ " $BRANCH_NAME " ]]; then
+              continue
+            fi
+
+            # Safely get last commit time with error handling
+            LAST_COMMIT=$(git log -1 --format=%ct "$branch" 2>/dev/null) || {
+              echo "Warning: Could not get commit time for $BRANCH_NAME, skipping"
+              continue
+            }
+
+            if [ -z "$LAST_COMMIT" ]; then
+              echo "Warning: Got empty commit time for $BRANCH_NAME, skipping"
+              continue
+            fi
+
+            AGE_DAYS=$(( (CURRENT_TIME - LAST_COMMIT) / 86400 ))
+
+            if [ $AGE_DAYS -ge $STALE_DAYS ]; then
+              echo "Stale branch detected: $BRANCH_NAME ($AGE_DAYS days)"
+
+              jq --arg name "$BRANCH_NAME" \
+                 --arg age "$AGE_DAYS" \
+                 '. += [{"branch": $name, "age": ($age|tonumber)}]' \
+                 stale_branches.json > tmp.json && mv tmp.json stale_branches.json || {
+                echo "Error: Failed to update stale_branches.json"
+                exit 1
+              }
+            fi
+          done
+
+          cat stale_branches.json
+
+      - name: Process stale branches
+        if: success()
+        run: |
+          set -e
+          MAX_ISSUES=5
+          ISSUES_CREATED=0
+
+          COUNT=$(jq length stale_branches.json)
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No stale branches found."
+            exit 0
+          fi
+
+          echo "Found $COUNT stale branch(es). Will create max $MAX_ISSUES issue(s)."
+
+          for row in $(jq -c '.[]' stale_branches.json); do
+            # Rate limiting: stop creating issues after MAX_ISSUES
+            if [ $ISSUES_CREATED -ge $MAX_ISSUES ]; then
+              echo "Rate limit reached ($MAX_ISSUES issues). Remaining branches will be skipped."
+              break
+            fi
+
+            BRANCH=$(echo "$row" | jq -r '.branch') || continue
+            AGE=$(echo "$row" | jq -r '.age') || continue
+
+            echo "Processing $BRANCH..."
+
+            # Get open PRs for branch
+            PR_DATA=$(gh pr list --head "$BRANCH" --state open --json number,author,reviewRequests 2>/dev/null || echo "[]")
+
+            PR_COUNT=$(echo "$PR_DATA" | jq length 2>/dev/null || echo "0")
+
+            if [ "$PR_COUNT" -gt 1 ]; then
+              AUTHOR=$(echo "$PR_DATA" | jq -r '.[0].author.login' 2>/dev/null || echo "Unknown")
+              REVIEWERS=$(echo "$PR_DATA" | jq -r '.[0].reviewRequests[].login' 2>/dev/null | tr '\n' ' ' || echo "None")
+
+              BODY="⚠️ **Stale Branch Alert**
+
+              Branch \`$BRANCH\` is stale ($AGE days old) and has multiple open PRs.
+
+              **Author:** @$AUTHOR  
+              **Reviewers:** $REVIEWERS  
+
+              Please consolidate or take action."
+
+              gh issue create \
+                --title "Stale Branch: $BRANCH (Multiple PRs)" \
+                --body "$BODY" && ISSUES_CREATED=$((ISSUES_CREATED + 1))
+
+            elif [ "$PR_COUNT" -eq 1 ]; then
+              echo "Single PR exists for $BRANCH. No action needed."
+
+            else
+              BODY="⚠️ **Stale Branch Alert**
+
+              Branch \`$BRANCH\` is stale ($AGE days old) and has no open PR.
+
+              Please create a PR or delete the branch."
+
+              gh issue create \
+                --title "Stale Branch: $BRANCH (No PR)" \
+                --body "$BODY" && ISSUES_CREATED=$((ISSUES_CREATED + 1))
+            fi
+
+          done
+
+          echo "Created $ISSUES_CREATED issue(s)."
