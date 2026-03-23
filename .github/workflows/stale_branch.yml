@@ -59,7 +59,7 @@ jobs:
               continue
             fi
 
-            AGE_DAYS=$(( (CURRENT_TIME - LAST_COMMIT) / 86400 ))
+            AGE_DAYS=$(( (CURRENT_TIME - LAST_COMMIT) / 60 ))
 
             if [ $AGE_DAYS -ge $STALE_DAYS ]; then
               echo "Stale branch detected: $BRANCH_NAME ($AGE_DAYS days)"
