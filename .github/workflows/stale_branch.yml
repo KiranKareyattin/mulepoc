@@ -117,12 +117,12 @@ jobs:
 
               BODY="⚠️ **Stale Branch Alert**
 
-Branch \`$BRANCH\` is stale ($AGE days old) and has multiple open PRs.
+              Branch \`$BRANCH\` is stale ($AGE days old) and has multiple open PRs.
 
-**Author:** @$AUTHOR  
-**Reviewers:** $REVIEWERS  
+              **Author:** @$AUTHOR  
+              **Reviewers:** $REVIEWERS  
 
-Please consolidate or take action."
+              Please consolidate or take action."
 
               gh issue create \
                 --title "Stale Branch: $BRANCH (Multiple PRs)" \
@@ -134,9 +134,9 @@ Please consolidate or take action."
             else
               BODY="⚠️ **Stale Branch Alert**
 
-Branch \`$BRANCH\` is stale ($AGE days old) and has no open PR.
+              Branch \`$BRANCH\` is stale ($AGE days old) and has no open PR.
 
-Please create a PR or delete the branch."
+              Please create a PR or delete the branch."
 
               gh issue create \
                 --title "Stale Branch: $BRANCH (No PR)" \
