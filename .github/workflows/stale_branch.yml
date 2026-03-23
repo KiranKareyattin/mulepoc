@@ -1,8 +1,6 @@
 name: Stale Branch Governance
 
 on:
-  schedule:
-    - cron: "0 3 * * *"
   workflow_dispatch:
 
 permissions:
