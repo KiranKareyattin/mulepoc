@@ -1,10 +1,7 @@
 name: PR Quality Check - Integration Test
 
 on:
-  push:
-    branches:
-      - main
-      - test
+  workflow_dispatch:
 
 env:
   JAVA_VERSION: "17"
@@ -53,8 +50,26 @@ jobs:
       # ✅ Run Mule app in background
       - name: Start Mule App
         run: |
-          mvn mule:run &
-          sleep 60
+          mvn mule:run > /tmp/mule.log 2>&1 &
+          MULE_PID=$!
+          echo "MULE_PID=$MULE_PID" >> $GITHUB_ENV
+          sleep 30
+
+      # ✅ Wait for Mule App
+      - name: Wait for Mule App
+        run: |
+          echo "Waiting for Mule App..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8081/ > /dev/null 2>&1; then
+              echo "Mule App is ready!"
+              exit 0
+            fi
+            echo "Attempt $i: Mule not ready yet, waiting..."
+            sleep 2
+          done
+          echo "Mule App failed to start"
+          cat /tmp/mule.log || true
+          exit 1
 
       # ✅ Run integration tests
       - name: Run Integration Tests
@@ -66,6 +81,16 @@ jobs:
         run: |
           mkdir -p target/integration-results/logs
           docker compose -f docker-compose.integration.yml logs > target/integration-results/logs/docker.log || true
+          cat /tmp/mule.log >> target/integration-results/logs/mule.log || true
+
+      # ✅ Stop Mule App
+      - name: Stop Mule App
+        if: always()
+        run: |
+          if [ ! -z "$MULE_PID" ]; then
+            kill $MULE_PID 2>/dev/null || true
+            wait $MULE_PID 2>/dev/null || true
+          fi
 
       # ✅ Stop services
       - name: Stop services
