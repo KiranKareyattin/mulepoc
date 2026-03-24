@@ -10,7 +10,7 @@ permissions:
 
 env:
   STALE_DAYS: 30
-  EXCLUDE_BRANCHES: "main develop"
+  EXCLUDE_BRANCHES: "hotfix"
 
 jobs:
   stale-branch-check:
